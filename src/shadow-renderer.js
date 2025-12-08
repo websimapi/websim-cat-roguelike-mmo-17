@@ -76,6 +76,8 @@ export class ShadowRenderer {
 
         // A. Ground Character Shadows (Draw ALL)
         allChars.forEach(({ obj, isNpc }) => {
+            if (obj.falling) return; // No shadow for falling/void entities
+
             const pos = renderer.gridToScreen(obj.x - 0.5, obj.y - 0.5, camX, camY);
             if (
                 pos.x < -tileSize || 
@@ -146,6 +148,8 @@ export class ShadowRenderer {
 
         // Draw character silhouettes into buffer
         items.forEach(({ obj, isNpc }) => {
+            if (obj.falling) return;
+
             const pos = renderer.gridToScreen(obj.x - 0.5, obj.y - 0.5, camX, camY);
             if (
                 pos.x < -tileSize || 

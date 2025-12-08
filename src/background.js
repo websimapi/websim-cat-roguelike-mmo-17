@@ -1,4 +1,10 @@
+export function setBackgroundQuality(scale) {
+    window._bgQuality = Math.max(0.1, Math.min(1.0, scale));
+    window.dispatchEvent(new Event('resize'));
+}
+
 export function initBackground() {
+    window._bgQuality = 0.25; // Default Retro
     const canvas = document.getElementById('bgCanvas');
     const gl = canvas.getContext('webgl');
 
@@ -172,9 +178,8 @@ export function initBackground() {
     const timeLocation = gl.getUniformLocation(program, "iTime");
 
     function resize() {
-        // Performance fix: Render at 1/4 resolution.
-        // CSS will scale it up, providing a retro pixelated look and saving massive GPU time.
-        const scale = 0.25; 
+        // Scale determined by module-level quality setting
+        const scale = window._bgQuality || 0.25; 
         const w = window.innerWidth;
         const h = window.innerHeight;
         const isPortrait = h > w;

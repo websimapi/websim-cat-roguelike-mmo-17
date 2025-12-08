@@ -225,19 +225,21 @@ export class Renderer {
         // Add Shop & Shop Shadow
         // Shop visual base is at row 3 (grid y=2, h=2, bottom=4 in grid logic but visual anchor)
         // Visual sorting: Shop stands at Y=3 approx.
-        const shopDepth = 3.1;
-        renderList.push({ type: 'shop', depth: shopDepth });
-        
-        // Add High Shadows (Cast on top of Shop) - Batched to prevent overlapping opacity artifacts
-        if (shadowOpacity > 0.01 && highShadows.length > 0) {
-            renderList.push({
-                type: 'high_shadows_batch',
-                items: highShadows,
-                depth: 3.15, 
-                opacity: shadowOpacity,
-                sx: sx,
-                sy: sy
-            });
+        if (!gameState.isInVoidRoom) {
+            const shopDepth = 3.1;
+            renderList.push({ type: 'shop', depth: shopDepth });
+            
+            // Add High Shadows (Cast on top of Shop) - Batched to prevent overlapping opacity artifacts
+            if (shadowOpacity > 0.01 && highShadows.length > 0) {
+                renderList.push({
+                    type: 'high_shadows_batch',
+                    items: highShadows,
+                    depth: 3.15, 
+                    opacity: shadowOpacity,
+                    sx: sx,
+                    sy: sy
+                });
+            }
         }
 
         // Add Characters

@@ -6,6 +6,9 @@ import { interactWithNPC, closeChat } from './ai.js';
 import { checkCollision, spawnProjectile, updateProjectiles } from './physics.js';
 import { updateNPCs } from './npc-controller.js';
 import { HUD } from './hud.js';
+import { initBackground, setBackgroundQuality } from './background.js';
+
+initBackground();
 
 const room = new WebsimSocket();
 
@@ -31,7 +34,8 @@ const state = {
     lastUpdate: 0,
     // Default fixed time: 3 minutes into the day (in seconds).
     // This can be overridden via settings.json -> timeOfDaySeconds.
-    time: 180
+    time: 180,
+    isInVoidRoom: false
 };
 
 // Logic for local player
@@ -51,6 +55,7 @@ const localPlayer = {
     // Void State properties
     falling: false,
     fallStartTime: 0,
+    fallStartScale: 2,
     voidRotation: 0,
     scale: 1
 };
@@ -169,31 +174,55 @@ function respawnLocalPlayer() {
     localPlayer.voidRotation = 0;
     localPlayer.vx = 0;
     localPlayer.vy = 0;
-    // Reset camera immediately? The renderer picks up x/y instantly.
 }
 
 function updateLocalPlayer(dt) {
     // Void / Falling Sequence
     if (localPlayer.falling) {
         const elapsed = (Date.now() - localPlayer.fallStartTime) / 1000;
-        const duration = 2.5; // Seconds to fall
+        const duration = 6.0; // Dramatic long fall
 
-        // 1. Push outwards (accelerate into void)
+        // 1. Zoom In Effect (Interpolate Scale)
+        const progress = Math.min(elapsed / duration, 1.0);
+        // Zoom from StartScale to 4x StartScale
+        CONFIG.SCALE = localPlayer.fallStartScale * (1 + progress * 3.5);
+
+        // 2. Increase Background Quality (Retro -> HD)
+        // 0.25 -> 1.0
+        const quality = 0.25 + (0.75 * progress);
+        setBackgroundQuality(quality);
+
+        // 3. Push outwards (accelerate into void)
         // Determine direction based on where they were
         const dir = localPlayer.x < CONFIG.GRID_W / 2 ? -1 : 1;
-        localPlayer.x += dir * 8 * dt; // Fast slide
+        localPlayer.x += dir * 12 * dt; // Fast slide
         
-        // 2. Scale down (sucked in)
+        // 4. Scale down character (sucked in)
         // Start shrinking after a brief moment
-        if (elapsed > 0.2) {
-            localPlayer.scale = Math.max(0, 1 - (elapsed - 0.2) / 1.5);
+        if (elapsed > 0.5) {
+            localPlayer.scale = Math.max(0, 1 - (elapsed - 0.5) / 2.0);
         }
 
-        // 3. Spin
-        localPlayer.voidRotation += dt * 10;
+        // 5. Spin (accelerating)
+        localPlayer.voidRotation += dt * (10 + progress * 20);
 
-        // 4. Respawn check
+        // 6. End Sequence
         if (elapsed > duration) {
+            // White Flash
+            const flash = document.getElementById('flash-overlay');
+            if (flash) {
+                flash.style.opacity = 1;
+                setTimeout(() => { flash.style.opacity = 0; }, 2000);
+            }
+
+            // Restore defaults
+            CONFIG.SCALE = localPlayer.fallStartScale;
+            setBackgroundQuality(0.25);
+
+            // Change Room State
+            state.isInVoidRoom = true;
+            state.npcs = []; // Clear NPCs
+            
             respawnLocalPlayer();
         }
         
@@ -205,6 +234,7 @@ function updateLocalPlayer(dt) {
     if (localPlayer.x < -1 || localPlayer.x > CONFIG.GRID_W) {
         localPlayer.falling = true;
         localPlayer.fallStartTime = Date.now();
+        localPlayer.fallStartScale = CONFIG.SCALE; // Capture current zoom
         return;
     }
 
@@ -224,10 +254,10 @@ function updateLocalPlayer(dt) {
         // Inline collision check removed, replaced with shared physics function
         const canMoveTo = (x, y) => {
             // Check all 4 corners of the hitbox
-            if (checkCollision(x - margin, y - margin)) return false;
-            if (checkCollision(x + margin, y + margin)) return false;
-            if (checkCollision(x + margin, y - margin)) return false;
-            if (checkCollision(x - margin, y + margin)) return false;
+            if (checkCollision(x - margin, y - margin, state.isInVoidRoom)) return false;
+            if (checkCollision(x + margin, y + margin, state.isInVoidRoom)) return false;
+            if (checkCollision(x + margin, y - margin, state.isInVoidRoom)) return false;
+            if (checkCollision(x - margin, y + margin, state.isInVoidRoom)) return false;
             return true;
         };
 

@@ -4,7 +4,7 @@ import { CONFIG, MAP_DATA } from './config.js';
  * Checks if a coordinate is blocked by walls, shop, or map boundaries.
  * Returns true if blocked.
  */
-export function checkCollision(x, y) {
+export function checkCollision(x, y, isVoidRoom = false) {
     const gx = Math.floor(x);
     const gy = Math.floor(y);
 
@@ -21,7 +21,7 @@ export function checkCollision(x, y) {
 
     // 2. Shop Collision (Visual pos: x=3, y=2, w=3, h=2)
     // Occupies grid x=[3,4,5]. We only block the "front" row (y=3) to allow walking behind the roof (y=2).
-    if (gx >= 3 && gx <= 5 && gy === 3) return true;
+    if (!isVoidRoom && gx >= 3 && gx <= 5 && gy === 3) return true;
 
     // 3. Gates (Allow passing through specific spots)
     const gateX = Math.floor(CONFIG.GRID_W / 2);
@@ -83,7 +83,7 @@ export function updateProjectiles(state, dt, localPlayer) {
 
         // Wall/Obstacle collision using the shared check logic
         // We check if the center of the bullet hits a wall
-        if (checkCollision(p.x, p.y)) {
+        if (checkCollision(p.x, p.y, state.isInVoidRoom)) {
             p.life = 0;
         }
 
